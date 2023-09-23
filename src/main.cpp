@@ -1,7 +1,7 @@
 // seyrek, ritka
 // -p precision set by .tostring(precision)
 
-#include <cassert>
+#include <assert.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -44,25 +44,35 @@ void hstack(real_2d_array x, real_2d_array y, real_2d_array *res) {
 }
 
 int main(int argc, char **argv) {
+    real_2d_array source =
+        "[[1, 2, 3],"
+         "[1, 2, 3],"
+         "[1, 2, 3],"
+         "[1, 2, 3]]";
+
+    real_2d_array target =
+        "[[4, 5, 6],"
+         "[4, 5, 6],"
+         "[4, 5, 6],"
+         "[4, 5, 6]]";
+
+    real_2d_array concat;
+    hstack(source, target, &concat);
+    std::cout << concat.tostring(3) << std::endl;
+
     rbfmodel model;
-    rbfcreate(2, 2, model);
+    rbfcreate(3, 3, model);
 
-    real_2d_array cat =
-        "[[+1, +1, 0, -1],"
-         "[+1, -1, -1, 0],"
-         "[-1, -1, 0, +1],"
-         "[-1, +1, +1, 0]]";
-
-    rbfsetpoints(model, cat);
+    rbfsetpoints(model, concat);
 
     rbfreport rep;
     rbfsetalgohierarchical(model, 1.0, 3, 0.0);
     rbfbuildmodel(model, rep);
 
-    real_1d_array x = "[+1,+1]";
+    real_1d_array point = "[1, 0.5, 2.0]";
     real_1d_array res;
-    rbfcalc(model, x, res);
-    std::cout << res.tostring(2) << std::endl; // EXPECTED: [0.000,-1.000]
+    rbfcalc(model, point, res);
+    std::cout << res.tostring(2) << std::endl;
 
     // real_1d_array grid;
     // linspace(&grid, 0.0, 1.0, 10);
@@ -71,25 +81,9 @@ int main(int argc, char **argv) {
 
     // std::cout << res2.tostring(3) << std::endl; // EXPECTED: [0.000,-1.000]
 
-    real_1d_array thing;
-    linspace(&thing, 0.0, 1.0, 5);
-    std::cout << thing.tostring(2) << std::endl;
-
-    real_2d_array bla_x =
-        "[[1, 2, 3],"
-         "[1, 2, 3],"
-         "[1, 2, 3],"
-         "[1, 2, 3]]";
-
-    real_2d_array bla_y =
-        "[[4, 5, 6],"
-         "[4, 5, 6],"
-         "[4, 5, 6],"
-         "[4, 5, 6]]";
-
-    real_2d_array resbla;
-    hstack(bla_x, bla_y, &resbla);
-    std::cout << resbla.tostring(3) << std::endl;
+    // real_1d_array thing;
+    // linspace(&thing, 0.0, 1.0, 5);
+    // std::cout << thing.tostring(2) << std::endl;
 
     return 0;
 }
