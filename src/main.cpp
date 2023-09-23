@@ -25,25 +25,24 @@ void linspace(real_1d_array *res, double start, double end, size_t steps) {
     delete[] buf;
 }
 
-// ALGLIB's 3D RBF expects a 2D array in the format:
+// Concatenates two real 2D arrays column wise.
+// ALGLIB expects vector input in the format:
 // [xyz.x, xyz.y, xyz.z, f(xyz).x, f(xyz).y, f(xyz).z]
-// or
-// [source.x, source.y, source.z, target.x, target.y, target.z]
-void concat_real_2d_array(real_2d_array x, real_2d_array y, real_2d_array *res) {
+void hstack(real_2d_array x, real_2d_array y, real_2d_array *res) {
     assert(x.rows() == y.rows());
-    assert(x.cols() == 3);
-    assert(y.cols() == 3);
 
     ae_int_t n_rows = x.rows();
-    ae_int_t n_cols = x.cols();
-    res->setlength(n_rows, 2 * n_cols);
+    ae_int_t x_cols = x.cols();
+    ae_int_t y_cols = y.cols();
+
+    res->setlength(n_rows, x_cols + y_cols);
 
     for (ae_int_t i = 0; i < n_rows; i += 1) {
-        for (ae_int_t j = 0; j < n_cols; j += 1) {
+        for (ae_int_t j = 0; j < x_cols; j += 1) {
             (*res)[i][j] = x[i][j];
         }
-        for (ae_int_t j = n_cols; j < 2 * n_cols; j += 1) {
-            (*res)[i][j] = y[i][j - n_cols];
+        for (ae_int_t j = x_cols; j < x_cols + y_cols; j += 1) {
+            (*res)[i][j] = y[i][j - x_cols];
         }
     }
 }
@@ -69,12 +68,12 @@ int main(int argc, char **argv) {
     rbfcalc(model, x, res);
     std::cout << res.tostring(2) << std::endl; // EXPECTED: [0.000,-1.000]
 
-    real_1d_array grid;
-    linspace(&grid, 0.0, 1.0, 10);
-    real_1d_array res2;
-    rbfgridcalc2v(model, grid, 10, grid, 10, res2);
+    // real_1d_array grid;
+    // linspace(&grid, 0.0, 1.0, 10);
+    // real_1d_array res2;
+    // rbfgridcalc2v(model, grid, 10, grid, 10, res2);
 
-    std::cout << res2.tostring(3) << std::endl; // EXPECTED: [0.000,-1.000]
+    // std::cout << res2.tostring(3) << std::endl; // EXPECTED: [0.000,-1.000]
 
     real_1d_array thing;
     linspace(&thing, 0.0, 1.0, 5);
@@ -93,7 +92,7 @@ int main(int argc, char **argv) {
          "[4, 5, 6]]";
 
     real_2d_array resbla;
-    concat_real_2d_array(bla_x, bla_y, &resbla);
+    hstack(bla_x, bla_y, &resbla);
     std::cout << resbla.tostring(3) << std::endl;
 
     return 0;
