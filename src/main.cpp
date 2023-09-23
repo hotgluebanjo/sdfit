@@ -1,4 +1,6 @@
 // seyrek, ritka
+// -p precision set by .tostring(precision)
+
 #include <cassert>
 #include <math.h>
 #include <stdio.h>
@@ -10,19 +12,13 @@
 
 using namespace alglib;
 
-// -p precision set by .tostring(precision)
-
-// TODO: Consistency.
 void linspace(real_1d_array *res, double start, double end, size_t steps) {
     double delta = (end - start) / double(steps - 1);
-    double *buf = new double[steps];
+    res->setlength(steps);
 
     for (int i = 0; i < steps; i += 1) {
-        buf[i] = double(i) * delta + start;
+        (*res)[i] = double(i) * delta + start;
     }
-
-    res->setcontent(steps, buf);
-    delete[] buf;
 }
 
 // Concatenates two real 2D arrays column wise.
