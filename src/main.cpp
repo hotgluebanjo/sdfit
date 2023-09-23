@@ -10,6 +10,8 @@
 
 using namespace alglib;
 
+// -p precision set by .tostring(precision)
+
 // TODO: Consistency.
 void linspace(real_1d_array *res, double start, double end, size_t steps) {
     double delta = (end - start) / double(steps - 1);
@@ -65,12 +67,14 @@ int main(int argc, char **argv) {
     real_1d_array x = "[+1,+1]";
     real_1d_array res;
     rbfcalc(model, x, res);
+    std::cout << res.tostring(2) << std::endl; // EXPECTED: [0.000,-1.000]
 
     real_1d_array grid;
     linspace(&grid, 0.0, 1.0, 10);
-    // rbfgridcalc2v(model, );
+    real_1d_array res2;
+    rbfgridcalc2v(model, grid, 10, grid, 10, res2);
 
-    std::cout << res.tostring(2) << std::endl; // EXPECTED: [0.000,-1.000]
+    std::cout << res2.tostring(3) << std::endl; // EXPECTED: [0.000,-1.000]
 
     real_1d_array thing;
     linspace(&thing, 0.0, 1.0, 5);
