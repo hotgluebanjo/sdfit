@@ -93,13 +93,13 @@ void print_help() {
     printf("  <target>   Plaintext file containing target dataset\n\n");
     printf("OPTIONS:\n");
     printf("  -h   Help\n");
-    printf("  -o   Output path and name (default: 'output.cube')\n");
-    printf("  -d   Dataset delimiter    (default: ' ')\n");
-    printf("  -p   LUT print precision  (default: 8)\n");
-    printf("  -c   LUT cube size        (default: 33)\n");
-    printf("  -s   RBF basis size       (default: 1.0)\n");
-    printf("  -l   RBF layers           (default: 5)\n");
-    printf("  -z   RBF smoothing        (default: 0.0)\n");
+    printf("  -o   Output path and name   default: 'output.cube'\n");
+    printf("  -d   Dataset delimiter      default: ' ' (space)\n");
+    printf("  -p   LUT print precision    default: 8\n");
+    printf("  -c   LUT cube size          default: 33\n");
+    printf("  -s   RBF basis size         default: 1.0\n");
+    printf("  -l   RBF layers             default: 5\n");
+    printf("  -z   RBF smoothing          default: 0.0\n");
     exit(1);
 }
 
@@ -206,7 +206,7 @@ void parse_options(const char **argv, int argc, Config *opts) {
                 if (next_exists) {
                     opts->smoothing = atof(argv[i + 1]);
                 } else {
-                    exit_err("Missing value for N-layers.");
+                    exit_err("Missing value for smoothing.");
                 }
             }
         }
