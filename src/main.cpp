@@ -2,6 +2,8 @@
 // -p precision set by .tostring(precision)
 
 #include <assert.h>
+#include <iomanip>
+#include <fstream>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -60,6 +62,13 @@ struct Config {
 
     std::string output;
 
+    // TODO: Limit?
+    char delimiter;
+
+    // LUT print precision.
+    // Lower precision results in smaller files.
+    int precision;
+
     // LUT cube size.
     size_t cube_size;
 
@@ -71,12 +80,6 @@ struct Config {
 
     // Optional smoothing.
     double smoothing;
-
-    // TODO: Limit?
-    char delimiter;
-
-    // TODO.
-    int precision;
 };
 
 void print_help() {
@@ -91,7 +94,8 @@ void print_help() {
     printf("OPTIONS:\n");
     printf("  -h   Help\n");
     printf("  -o   Output path and name (default: 'output.cube')\n");
-    printf("  -d   delimiter            (default: ' ')\n");
+    printf("  -d   Dataset delimiter    (default: ' ')\n");
+    printf("  -p   LUT print precision  (default: 8)\n");
     printf("  -c   LUT cube size        (default: 33)\n");
     printf("  -s   RBF basis size       (default: 1.0)\n");
     printf("  -l   RBF layers           (default: 5)\n");
@@ -170,6 +174,13 @@ void parse_options(const char **argv, int argc, Config *opts) {
                     exit_err("Missing value for delimiter. It may need to be in quotes.");
                 }
                 break;
+            case 'p':
+                if (next_exists) {
+                    opts->precision = atoi(argv[i + 1]);
+                } else {
+                    exit_err("Missing value for precision.");
+                }
+                break;
             case 'c':
                 if (next_exists) {
                     opts->cube_size = atoi(argv[i + 1]);
@@ -215,12 +226,12 @@ int main(int argc, const char **argv) {
         .source_path = argv[1],
         .target_path = argv[2],
         .output = "output.cube",
+        .delimiter = ' ',
+        .precision = 8,
         .cube_size = 33,
         .basis_size = 1.0,
         .layers = 5,
         .smoothing = 0.0,
-        .delimiter = ' ',
-        .precision = 8,
     };
 
     parse_options(argv, argc, &opts);
@@ -228,19 +239,28 @@ int main(int argc, const char **argv) {
     ae::real_2d_array concat_points = load_points(&opts);
     ae::real_1d_array res = build_lut(concat_points, &opts);
 
-    FILE *lut_file = fopen(opts.output.c_str(), "w");
+    std::ofstream lut_file;
+    lut_file.open(opts.output);
 
-    if (lut_file == NULL) {
+    if (lut_file.fail()) {
         exit_err("Could not open LUT file.\n");
     }
 
-    fprintf(lut_file, "LUT_3D_SIZE %d\n\n", opts.cube_size);
+    lut_file << "LUT_3D_SIZE " << opts.cube_size << "\n\n";
 
     for (ae::ae_int_t i = 0; i < opts.cube_size * opts.cube_size * opts.cube_size; i += 1) {
-        fprintf(lut_file, "%f %f %f\n", res[3 * i], res[3 * i + 1], res[3 * i + 2]);
+        lut_file
+            << std::fixed
+            << std::setprecision(opts.precision)
+            << res[3 * i]
+            << ' '
+            << res[3 * i + 1]
+            << ' '
+            << res[3 * i + 2]
+            << '\n';
     }
 
-    fclose(lut_file);
+    lut_file.close();
 
     printf("Created LUT '%s'.\n", opts.output.c_str());
 
