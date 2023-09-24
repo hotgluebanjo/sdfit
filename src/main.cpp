@@ -60,12 +60,22 @@ struct Config {
 
     std::string output;
 
-    // LUT cube size
-    int cube_size;
+    // LUT cube size.
+    size_t cube_size;
+
+    // RBase gaussian size.
     double basis_size;
-    int layers;
+
+    // Number of model layers.
+    ae::ae_int_t layers;
+
+    // Optional smoothing.
     double smoothing;
+
+    // TODO: Limit?
     char delimiter;
+
+    // TODO.
     int precision;
 };
 
@@ -84,7 +94,7 @@ void print_help() {
     printf("  -d   delimiter            (default: ' ')\n");
     printf("  -c   LUT cube size        (default: 33)\n");
     printf("  -s   RBF basis size       (default: 1.0)\n");
-    printf("  -l   RBF layers           (default: 3)\n");
+    printf("  -l   RBF layers           (default: 5)\n");
     printf("  -z   RBF smoothing        (default: 0.0)\n");
     exit(1);
 }
@@ -137,6 +147,61 @@ ae::real_1d_array build_lut(ae::real_2d_array points, Config *opts) {
     return res;
 }
 
+// Very primitive option parsing. Uses atof, so don't mess up the input.
+void parse_options(const char **argv, int argc, Config *opts) {
+    for (int i = 3; i < argc; i += 1) {
+        if (argv[i][0] == '-') {
+            bool next_exists = i + 1 < argc;
+            // TODO: atoi/f
+            switch (argv[i][1]) {
+            case 'h':
+                print_help();
+            case 'o':
+                if (next_exists) {
+                    opts->output = argv[i + 1];
+                } else {
+                    exit_err("Missing value for output name.");
+                }
+                break;
+            case 'd':
+                if (next_exists) {
+                    opts->delimiter = argv[i + 1][0]; // Assume first char.
+                } else {
+                    exit_err("Missing value for delimiter. It may need to be in quotes.");
+                }
+                break;
+            case 'c':
+                if (next_exists) {
+                    opts->cube_size = atoi(argv[i + 1]);
+                } else {
+                    exit_err("Missing value for cube size.");
+                }
+                break;
+            case 's':
+                if (next_exists) {
+                    opts->basis_size = atof(argv[i + 1]);
+                } else {
+                    exit_err("Missing value for basis size.");
+                }
+                break;
+            case 'l':
+                if (next_exists) {
+                    opts->layers = atoi(argv[i + 1]);
+                } else {
+                    exit_err("Missing value for N-layers.");
+                }
+                break;
+            case 'z':
+                if (next_exists) {
+                    opts->smoothing = atof(argv[i + 1]);
+                } else {
+                    exit_err("Missing value for N-layers.");
+                }
+            }
+        }
+    }
+}
+
 int main(int argc, const char **argv) {
     if (argc == 1 || !strcmp(argv[1], "-h")) {
         print_help();
@@ -152,11 +217,13 @@ int main(int argc, const char **argv) {
         .output = "output.cube",
         .cube_size = 33,
         .basis_size = 1.0,
-        .layers = 3,
+        .layers = 5,
         .smoothing = 0.0,
         .delimiter = ' ',
         .precision = 8,
     };
+
+    parse_options(argv, argc, &opts);
 
     ae::real_2d_array concat_points = load_points(&opts);
     ae::real_1d_array res = build_lut(concat_points, &opts);
