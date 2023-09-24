@@ -2,7 +2,7 @@ if (-not (test-path target)) {
     md target
 }
 
-zig c++ -o ./target/sd_interp.exe -I ./alglib/ `
+zig c++ -o ./target/rbf-interp.exe -I ./alglib/ `
     ./src/main.cpp `
     ./alglib/alglibinternal.cpp `
     ./alglib/alglibmisc.cpp `

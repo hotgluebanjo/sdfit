@@ -153,12 +153,11 @@ ae::real_1d_array build_lut(ae::real_2d_array points, Config *opts) {
     return res;
 }
 
-// Very primitive option parsing. Uses atof, so don't mess up the input.
+// Very primitive option parsing. Uses atoi/f, so don't mess up the input.
 void parse_options(const char **argv, int argc, Config *opts) {
     for (int i = 3; i < argc; i += 1) {
         if (argv[i][0] == '-') {
             bool next_exists = i + 1 < argc;
-            // TODO: atoi/f
             switch (argv[i][1]) {
             case 'h':
                 print_help();
