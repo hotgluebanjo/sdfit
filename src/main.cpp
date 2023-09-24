@@ -43,16 +43,35 @@ void hstack(real_2d_array x, real_2d_array y, real_2d_array *res) {
     }
 }
 
-int main(int argc, char **argv) {
-    const char *source_path = "test_data/p4k.txt";
-    const char *target_path = "test_data/alexa.txt";
+struct Config {
+    const char *source_path;
+    const char *target_path;
+    const char *lut_path;
+    int cube_size;
+    double basis_size;
+    int layers;
+    double smoothing;
+    char delimiter;
+    int precision;
+};
 
-    char separator = ' ';
+int main(int argc, char **argv) {
+    Config opts = {
+        .source_path = "test_data/p4k.txt",
+        .target_path = "test_data/alexa.txt",
+        .lut_path = "output.cube",
+        .cube_size = 33,
+        .basis_size = 1.0,
+        .layers = 3,
+        .smoothing = 0.0,
+        .delimiter = ' ',
+        .precision = 8,
+    };
 
     real_2d_array source, target;
 
-    read_csv(source_path, separator, 0, source);
-    read_csv(target_path, separator, 0, target);
+    read_csv(opts.source_path, opts.delimiter, 0, source);
+    read_csv(opts.target_path, opts.delimiter, 0, target);
 
     real_2d_array concat;
     hstack(source, target, &concat);
@@ -64,23 +83,26 @@ int main(int argc, char **argv) {
     rbfsetpoints(model, concat);
 
     rbfreport rep;
-    rbfsetalgohierarchical(model, 1.0, 3, 0.0);
+    rbfsetalgohierarchical(model, opts.basis_size, opts.layers, opts.smoothing);
     rbfbuildmodel(model, rep);
 
-    ae_int_t cube_size = 3;
     real_1d_array grid;
-    linspace(&grid, 0.0, 1.0, cube_size);
+    linspace(&grid, 0.0, 1.0, opts.cube_size);
 
     real_1d_array res;
-    rbfgridcalc3v(model, grid, cube_size, grid, cube_size, grid, cube_size, res);
+    rbfgridcalc3v(model, grid, opts.cube_size, grid, opts.cube_size, grid, opts.cube_size, res);
 
-    for (int i = 0; i < cube_size * cube_size * cube_size; i += 1) {
-        printf(
-            "%f %f %f\n",
-            res[3 * i + 0],
-            res[3 * i + 1],
-            res[3 * i + 2]
-        );
+    FILE *lut_file = fopen(opts.lut_path, "w");
+
+    if (lut_file == NULL) {
+        fprintf(stderr, "write: could not open lut file.\n");
+        exit(1);
+    }
+
+    fprintf(lut_file, "LUT_3D_SIZE %d\n\n", opts.cube_size);
+
+    for (int i = 0; i < opts.cube_size * opts.cube_size * opts.cube_size; i += 1) {
+        fprintf(lut_file, "%f %f %f\n", res[3 * i], res[3 * i + 1], res[3 * i + 2]);
     }
 
     return 0;
