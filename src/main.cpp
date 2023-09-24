@@ -44,21 +44,19 @@ void hstack(real_2d_array x, real_2d_array y, real_2d_array *res) {
 }
 
 int main(int argc, char **argv) {
-    real_2d_array source =
-        "[[1, 2, 3],"
-         "[1, 2, 3],"
-         "[1, 2, 3],"
-         "[1, 2, 3]]";
+    const char *source_path = "test_data/p4k.txt";
+    const char *target_path = "test_data/alexa.txt";
 
-    real_2d_array target =
-        "[[4, 5, 6],"
-         "[4, 5, 6],"
-         "[4, 5, 6],"
-         "[4, 5, 6]]";
+    char separator = ' ';
+
+    real_2d_array source, target;
+
+    read_csv(source_path, separator, 0, source);
+    read_csv(target_path, separator, 0, target);
 
     real_2d_array concat;
     hstack(source, target, &concat);
-    std::cout << concat.tostring(3) << std::endl;
+    // std::cout << concat.tostring(3) << std::endl;
 
     rbfmodel model;
     rbfcreate(3, 3, model);
@@ -69,21 +67,21 @@ int main(int argc, char **argv) {
     rbfsetalgohierarchical(model, 1.0, 3, 0.0);
     rbfbuildmodel(model, rep);
 
-    real_1d_array point = "[1, 0.5, 2.0]";
+    ae_int_t cube_size = 3;
+    real_1d_array grid;
+    linspace(&grid, 0.0, 1.0, cube_size);
+
     real_1d_array res;
-    rbfcalc(model, point, res);
-    std::cout << res.tostring(2) << std::endl;
+    rbfgridcalc3v(model, grid, cube_size, grid, cube_size, grid, cube_size, res);
 
-    // real_1d_array grid;
-    // linspace(&grid, 0.0, 1.0, 10);
-    // real_1d_array res2;
-    // rbfgridcalc2v(model, grid, 10, grid, 10, res2);
-
-    // std::cout << res2.tostring(3) << std::endl; // EXPECTED: [0.000,-1.000]
-
-    // real_1d_array thing;
-    // linspace(&thing, 0.0, 1.0, 5);
-    // std::cout << thing.tostring(2) << std::endl;
+    for (int i = 0; i < cube_size * cube_size * cube_size; i += 1) {
+        printf(
+            "%f %f %f\n",
+            res[3 * i + 0],
+            res[3 * i + 1],
+            res[3 * i + 2]
+        );
+    }
 
     return 0;
 }
