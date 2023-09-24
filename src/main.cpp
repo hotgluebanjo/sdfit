@@ -5,7 +5,6 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <string>
 
 #include "../alglib/interpolation.h"
@@ -16,13 +15,17 @@ using namespace alglib;
 #define exit_err(msg) { fprintf(stderr, msg); exit(1); }
 #define exit_errf(str, ag) { fprintf(stderr, msg, ag); exit(1); }
 
-void linspace(real_1d_array *res, double start, double end, size_t steps) {
+real_1d_array linspace(double start, double end, size_t steps) {
+    real_1d_array res;
+    res.setlength(steps);
+
     double delta = (end - start) / double(steps - 1);
-    res->setlength(steps);
 
     for (int i = 0; i < steps; i += 1) {
-        (*res)[i] = double(i) * delta + start;
+        res[i] = double(i) * delta + start;
     }
+
+    return res;
 }
 
 // Concatenates two real 2D arrays column wise.
@@ -51,9 +54,13 @@ real_2d_array hstack(real_2d_array x, real_2d_array y) {
 }
 
 struct Config {
+    // Paths to dataset files.
     std::string source_path;
     std::string target_path;
+
     std::string output;
+
+    // LUT cube size
     int cube_size;
     double basis_size;
     int layers;
@@ -63,10 +70,14 @@ struct Config {
 };
 
 void print_help() {
-    printf("SD Interp v0.1.0\n");
-    printf("Scattered data interpolation for tristimulus lookup tables.\n\n");
-    printf("USAGE: sdinterp <source.txt> <target.txt> [OPTIONS]\n");
-    printf("Example: sdinterp alexa.csv print-film.csv -d ',' -o alexa_to_print_film.cube\n\n");
+    printf("rbf-interp v0.1.0\n");
+    printf("Scattered data interpolation for tristimulus lookup tables.\n");
+    printf("https://github.com/hotgluebanjo\n\n");
+    printf("USAGE: rbf-interp <source> <target> [OPTIONS]\n\n");
+    printf("EXAMPLE: rbf-interp alexa.csv print-film.csv -d ',' -o alexa_to_print_film.cube\n\n");
+    printf("INPUTS:\n");
+    printf("  <source>   Plaintext file containing source dataset\n");
+    printf("  <target>   Plaintext file containing target dataset\n\n");
     printf("OPTIONS:\n");
     printf("  -h   Help\n");
     printf("  -o   Output path and name (default: 'output.cube')\n");
@@ -78,13 +89,61 @@ void print_help() {
     exit(1);
 }
 
+real_2d_array load_points(Config *opts) {
+    real_2d_array source, target;
+
+    // Stuck with this.
+    try {
+        read_csv(opts->source_path.c_str(), opts->delimiter, 0, source);
+        read_csv(opts->target_path.c_str(), opts->delimiter, 0, target);
+    } catch (...) {
+        exit_err("Could not read XSV. Check that the file exists and has real Nx3 contents.\n");
+    }
+
+    // --- Sanity checks. TODO: Reader? --- //
+
+    if (source.rows() == 0) exit_err("No readable XSV content in source.\n");
+    if (target.rows() == 0) exit_err("No readable XSV content in target.\n");
+
+    if (source.rows() != target.rows())
+        exit_err("Source and target do not have the same number of XSV rows.\n");
+
+    if (target.cols() != 3) exit_err("Source contains non-triplet rows.\n");
+    if (source.cols() != 3) exit_err("Target contains non-triplet rows.\n");
+
+    return hstack(source, target);
+}
+
+// TODO: Return LUT.
+real_1d_array build_lut(real_2d_array points, Config *opts) {
+    assert(points.cols() == 6); // 2 * 3D
+
+    rbfmodel model;
+    rbfcreate(3, 3, model);
+
+    // TODO: DDM solver?
+    rbfsetpoints(model, points);
+    rbfsetalgohierarchical(model, opts->basis_size, opts->layers, opts->smoothing);
+
+    // TODO: Report errors? Also speed.
+    rbfreport rep;
+    rbfbuildmodel(model, rep);
+
+    real_1d_array grid = linspace(0.0, 1.0, opts->cube_size);
+
+    real_1d_array res;
+    rbfgridcalc3v(model, grid, opts->cube_size, grid, opts->cube_size, grid, opts->cube_size, res);
+
+    return res;
+}
+
 int main(int argc, const char **argv) {
     if (argc == 1 || !strcmp(argv[1], "-h")) {
         print_help();
     }
 
     if (argc == 2) {
-        exit_err("cli: missing target data set");
+        exit_err("Missing target dataset.\n");
     }
 
     Config opts = {
@@ -99,61 +158,13 @@ int main(int argc, const char **argv) {
         .precision = 8,
     };
 
-    real_2d_array source, target;
-
-    // Stuck with exceptions.
-    try {
-        read_csv(opts.source_path.c_str(), opts.delimiter, 0, source);
-        read_csv(opts.target_path.c_str(), opts.delimiter, 0, target);
-    } catch (...) {
-        exit_err("Could not read XSV. Check that the file exists and has real Nx3 contents.");
-    }
-
-    // A million sanity checks. TODO: Reader?
-    if (source.rows() == 0) {
-        exit_err("No readable XSV content in source.");
-    }
-
-    if (target.rows() == 0) {
-        exit_err("No readable XSV content in target.");
-    }
-
-    if (source.rows() != target.rows()) {
-        exit_err("Source and target do not have the same number of XSV rows.");
-    }
-
-    if (target.cols() != 3) {
-        exit_err("Source contains non-triplet rows.");
-    }
-
-    if (source.cols() != 3) {
-        exit_err("Target contains non-triplet rows.");
-    }
-
-    real_2d_array concat = hstack(source, target);
-    // std::cout << concat.tostring(3) << std::endl;
-
-    rbfmodel model;
-    rbfcreate(3, 3, model);
-
-    rbfsetpoints(model, concat);
-
-    rbfreport rep;
-    // TODO: DDM solver?
-    rbfsetalgohierarchical(model, opts.basis_size, opts.layers, opts.smoothing);
-    rbfbuildmodel(model, rep);
-
-    real_1d_array grid;
-    linspace(&grid, 0.0, 1.0, opts.cube_size);
-
-    real_1d_array res;
-    rbfgridcalc3v(model, grid, opts.cube_size, grid, opts.cube_size, grid, opts.cube_size, res);
+    real_2d_array concat_points = load_points(&opts);
+    real_1d_array res = build_lut(concat_points, &opts);
 
     FILE *lut_file = fopen(opts.output.c_str(), "w");
 
     if (lut_file == NULL) {
-        fprintf(stderr, "Could not open LUT file.\n");
-        exit(1);
+        exit_err("Could not open LUT file.\n");
     }
 
     fprintf(lut_file, "LUT_3D_SIZE %d\n\n", opts.cube_size);
