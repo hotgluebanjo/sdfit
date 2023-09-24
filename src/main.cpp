@@ -122,8 +122,10 @@ ae::real_2d_array load_points(Config *opts) {
     if (source.rows() != target.rows())
         exit_err("Source and target do not have the same number of XSV rows.\n");
 
-    if (target.cols() != 3) exit_err("Source contains non-triplet rows.\n");
-    if (source.cols() != 3) exit_err("Target contains non-triplet rows.\n");
+    if (target.cols() != 3)
+        exit_err("Source contains non-triplet rows. This may be because the delimiter is wrong.\n");
+    if (source.cols() != 3)
+        exit_err("Target contains non-triplet rows. This may be because the delimiter is wrong.\n");
 
     return hstack(source, target);
 }
@@ -161,53 +163,57 @@ void parse_options(const char **argv, int argc, Config *opts) {
             case 'h':
                 print_help();
             case 'o':
-                if (next_exists) {
-                    opts->output = argv[i + 1];
-                } else {
-                    exit_err("Missing value for output name.");
+                if (!next_exists) {
+                    exit_err("Missing value for output name.\n");
+                }
+                opts->output = argv[i + 1];
+                break;
+            case 'd': {
+                if (!next_exists) {
+                    exit_err("Missing value for delimiter. It may need to be in quotes.\n");
+                }
+                char input = argv[i + 1][0]; // Assume first char.
+                switch (input) {
+                    case ' ':
+                    case ',':
+                    case ';':
+                    case '\t': // ?
+                        opts->delimiter = input;
+                        break;
+                    default:
+                        exit_err("Unsupported delimiter. Use one of [' ' | ',' | ';' | '\t']\n");
                 }
                 break;
-            case 'd':
-                if (next_exists) {
-                    opts->delimiter = argv[i + 1][0]; // Assume first char.
-                } else {
-                    exit_err("Missing value for delimiter. It may need to be in quotes.");
-                }
-                break;
+            }
             case 'p':
-                if (next_exists) {
-                    opts->precision = atoi(argv[i + 1]);
-                } else {
-                    exit_err("Missing value for precision.");
+                if (!next_exists) {
+                    exit_err("Missing value for precision.\n");
                 }
+                opts->precision = atoi(argv[i + 1]);
                 break;
             case 'c':
-                if (next_exists) {
-                    opts->cube_size = atoi(argv[i + 1]);
-                } else {
-                    exit_err("Missing value for cube size.");
+                if (!next_exists) {
+                    exit_err("Missing value for cube size.\n");
                 }
+                opts->cube_size = atoi(argv[i + 1]);
                 break;
             case 's':
-                if (next_exists) {
-                    opts->basis_size = atof(argv[i + 1]);
-                } else {
-                    exit_err("Missing value for basis size.");
+                if (!next_exists) {
+                    exit_err("Missing value for basis size.\n");
                 }
+                opts->basis_size = atof(argv[i + 1]);
                 break;
             case 'l':
-                if (next_exists) {
-                    opts->layers = atoi(argv[i + 1]);
-                } else {
-                    exit_err("Missing value for N-layers.");
+                if (!next_exists) {
+                    exit_err("Missing value for N-layers.\n");
                 }
+                opts->layers = atoi(argv[i + 1]);
                 break;
             case 'z':
-                if (next_exists) {
-                    opts->smoothing = atof(argv[i + 1]);
-                } else {
-                    exit_err("Missing value for smoothing.");
+                if (!next_exists) {
+                    exit_err("Missing value for smoothing.\n");
                 }
+                opts->smoothing = atof(argv[i + 1]);
             }
         }
     }
