@@ -1,3 +1,4 @@
+# Note: This is for an outdated version of ALGLIB: v3.17.0
 import numpy as np
 import xalglib
 
@@ -9,8 +10,6 @@ cube_size = 33
 assert len(source) == len(target)
 
 data = np.hstack((source, target))
-
-import xalglib
 
 trn = xalglib.mlpcreatetrainer(3, 3)
 
