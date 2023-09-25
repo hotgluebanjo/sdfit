@@ -1,9 +1,6 @@
-// seyrek, ritka
-// -p precision set by .tostring(precision)
-
 #include <assert.h>
-#include <iomanip>
 #include <fstream>
+#include <iomanip>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,7 +12,6 @@
 namespace ae = alglib;
 
 #define exit_err(msg) { fprintf(stderr, msg); exit(1); }
-#define exit_errf(str, ag) { fprintf(stderr, msg, ag); exit(1); }
 
 ae::real_1d_array linspace(double start, double end, size_t steps) {
     ae::real_1d_array res;
@@ -60,22 +56,23 @@ struct Config {
     std::string source_path;
     std::string target_path;
 
+    // Output LUT.
     std::string output;
 
-    // TODO: Limit?
+    // Dataset XSV delimiter.
     char delimiter;
 
     // LUT print precision.
     // Lower precision results in smaller files.
     int precision;
 
-    // LUT cube size.
+    // 3D LUT cube precision (N^3).
     size_t cube_size;
 
     // RBase gaussian size.
     double basis_size;
 
-    // Number of model layers.
+    // Number of hierarchical model layers.
     ae::ae_int_t layers;
 
     // Optional smoothing.
