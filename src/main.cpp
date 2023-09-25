@@ -1,3 +1,4 @@
+// https://github.com/chensun11/dtfv/blob/master/src/Makefile
 #include <assert.h>
 #include <fstream>
 #include <iomanip>
@@ -51,6 +52,7 @@ ae::real_2d_array hstack(ae::real_2d_array x, ae::real_2d_array y) {
     return res;
 }
 
+// TODO: Specify LUT format.
 struct Config {
     // Paths to dataset files.
     std::string source_path;
@@ -138,7 +140,7 @@ ae::real_1d_array build_lut(ae::real_2d_array points, Config *opts) {
     ae::rbfsetpoints(model, points);
     ae::rbfsetalgohierarchical(model, opts->basis_size, opts->layers, opts->smoothing);
 
-    // TODO: Report errors? Also speed.
+    // TODO: Report errors? Print solve error. Also speed.
     ae::rbfreport rep;
     ae::rbfbuildmodel(model, rep);
 
