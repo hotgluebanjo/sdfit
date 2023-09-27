@@ -108,7 +108,7 @@ void print_help() {
     printf("  -p   LUT print precision                    default: 8\n");
     printf("  -c   LUT cube size                          default: 33\n");
     printf("  -f   LUT format [cube | spi]                default: cube\n");
-    printf("  -s   RBF basis size                         default: 1.0\n");
+    printf("  -s   RBF basis size                         default: 5.0\n");
     printf("  -l   RBF layers                             default: 5\n");
     printf("  -z   RBF smoothing                          default: 0.0\n");
     exit(1);
@@ -286,9 +286,13 @@ void write_lut(ae::real_1d_array lut, Config *opts) {
             << opts->cube_size << ' '
             << opts->cube_size << '\n';
 
-        /* Indices are swizzled but not values.
-           https://github.com/AcademySoftwareFoundation/OpenColorIO/blob/
-           c429400170ccd34902d8a6b26e70c43e26d57751/src/OpenColorIO/fileformats/FileFormatSpi3D.cpp#L294 */
+        /*
+        The indices are swizzled in other implementations, but their ordering of entries must
+        be different. This works in OCIO.
+
+        https://github.com/AcademySoftwareFoundation/OpenColorIO/blob/
+        c429400170ccd34902d8a6b26e70c43e26d57751/src/OpenColorIO/fileformats/FileFormatSpi3D.cpp#L294
+        */
         for (ae::ae_int_t i = 0; i < cube_i(opts->cube_size); i += 1) {
             ae::ae_int_t x = i % opts->cube_size;
             ae::ae_int_t y = (i / opts->cube_size) % opts->cube_size;
@@ -297,9 +301,9 @@ void write_lut(ae::real_1d_array lut, Config *opts) {
             lut_file
                 << std::fixed
                 << std::setprecision(opts->precision)
-                << z << ' '
-                << y << ' '
                 << x << ' '
+                << y << ' '
+                << z << ' '
                 << lut[3 * i + 0] << ' '
                 << lut[3 * i + 1] << ' '
                 << lut[3 * i + 2] << '\n';
@@ -328,7 +332,7 @@ int main(int argc, const char **argv) {
         .precision = 8,
         .cube_size = 33,
         .format = RESOLVE_CUBE,
-        .basis_size = 1.0,
+        .basis_size = 5.0,
         .layers = 5,
         .smoothing = 0.0,
     };
