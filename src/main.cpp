@@ -1,6 +1,5 @@
 // https://github.com/chensun11/dtfv/blob/master/src/Makefile
 #include <assert.h>
-#include <format>
 #include <fstream>
 #include <iomanip>
 #include <math.h>
@@ -266,7 +265,9 @@ void write_lut(ae::real_1d_array lut, Config *opts) {
             lut_file
                 << std::fixed
                 << std::setprecision(opts->precision)
-                << std::format("{} {} {}\n", lut[3 * i], lut[3 * i + 1], lut[3 * i + 2]);
+                << lut[3 * i + 0] << ' '
+                << lut[3 * i + 1] << ' '
+                << lut[3 * i + 2] << '\n';
         }
         break;
     case SONY_SPI3D:
@@ -280,22 +281,28 @@ void write_lut(ae::real_1d_array lut, Config *opts) {
             exit_err("Could not open SPI3D LUT file.\n");
         }
 
-        lut_file << std::format("SPILUT 1.0\n3 3\n{0} {0} {0}\n", opts->cube_size);
+        lut_file << "SPILUT 1.0\n3 3\n"
+            << opts->cube_size << ' '
+            << opts->cube_size << ' '
+            << opts->cube_size << '\n';
 
-        /* https://github.com/AcademySoftwareFoundation/OpenColorIO/blob/
+        /* Indices are swizzled but not values.
+           https://github.com/AcademySoftwareFoundation/OpenColorIO/blob/
            c429400170ccd34902d8a6b26e70c43e26d57751/src/OpenColorIO/fileformats/FileFormatSpi3D.cpp#L294 */
         for (ae::ae_int_t i = 0; i < cube_i(opts->cube_size); i += 1) {
+            ae::ae_int_t x = i % opts->cube_size;
+            ae::ae_int_t y = (i / opts->cube_size) % opts->cube_size;
+            ae::ae_int_t z = i / sqr_i(opts->cube_size);
+
             lut_file
                 << std::fixed
                 << std::setprecision(opts->precision)
-                << std::format(
-                    "{} {} {} {} {} {}\n",
-                    i / sqr_i(opts->cube_size),
-                    (i / opts->cube_size) % opts->cube_size,
-                    i % opts->cube_size,
-                    lut[3 * i],
-                    lut[3 * i + 1],
-                    lut[3 * i + 2]);
+                << z << ' '
+                << y << ' '
+                << x << ' '
+                << lut[3 * i + 0] << ' '
+                << lut[3 * i + 1] << ' '
+                << lut[3 * i + 2] << '\n';
         }
     }
 
