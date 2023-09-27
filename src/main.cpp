@@ -1,5 +1,6 @@
 // https://github.com/chensun11/dtfv/blob/master/src/Makefile
 #include <assert.h>
+#include <format>
 #include <fstream>
 #include <iomanip>
 #include <math.h>
@@ -13,6 +14,8 @@
 namespace ae = alglib;
 
 #define exit_err(msg) { fprintf(stderr, msg); exit(1); }
+#define sqr_i(v) (v * v)
+#define cube_i(v) (v * v * v)
 
 ae::real_1d_array linspace(double start, double end, size_t steps) {
     ae::real_1d_array res;
@@ -52,6 +55,11 @@ ae::real_2d_array hstack(ae::real_2d_array x, ae::real_2d_array y) {
     return res;
 }
 
+enum Lut_Format {
+    RESOLVE_CUBE,
+    SONY_SPI3D,
+};
+
 // TODO: Specify LUT format.
 struct Config {
     // Paths to dataset files.
@@ -70,6 +78,11 @@ struct Config {
 
     // 3D LUT cube precision (N^3).
     size_t cube_size;
+
+    // Supported:
+    // - Resolve Cube
+    // - Sony SPI3D
+    Lut_Format format;
 
     // RBase gaussian size.
     double basis_size;
@@ -92,13 +105,14 @@ void print_help() {
     printf("  <target>   Plaintext file containing target dataset\n\n");
     printf("OPTIONS:\n");
     printf("  -h   Help\n");
-    printf("  -o   Output path and name   default: 'output.cube'\n");
-    printf("  -d   Dataset delimiter      default: ' ' (space)\n");
-    printf("  -p   LUT print precision    default: 8\n");
-    printf("  -c   LUT cube size          default: 33\n");
-    printf("  -s   RBF basis size         default: 1.0\n");
-    printf("  -l   RBF layers             default: 5\n");
-    printf("  -z   RBF smoothing          default: 0.0\n");
+    printf("  -o   Output path and name                   default: 'output.cube'\n");
+    printf("  -d   Dataset delimiter [' ' | ',' | <tab>]  default: ' ' (space)\n");
+    printf("  -p   LUT print precision                    default: 8\n");
+    printf("  -c   LUT cube size                          default: 33\n");
+    printf("  -f   LUT format [cube | spi]                default: cube\n");
+    printf("  -s   RBF basis size                         default: 1.0\n");
+    printf("  -l   RBF layers                             default: 5\n");
+    printf("  -z   RBF smoothing                          default: 0.0\n");
     exit(1);
 }
 
@@ -153,7 +167,7 @@ ae::real_1d_array build_lut(ae::real_2d_array points, Config *opts) {
 }
 
 // Very primitive option parsing. Uses atoi/f, so don't mess up the input.
-void parse_options(const char **argv, int argc, Config *opts) {
+void parse_options(Config *opts, const char **argv, int argc) {
     for (int i = 3; i < argc; i += 1) {
         if (argv[i][0] == '-') {
             bool next_exists = i + 1 < argc;
@@ -179,7 +193,7 @@ void parse_options(const char **argv, int argc, Config *opts) {
                         opts->delimiter = input;
                         break;
                     default:
-                        exit_err("Unsupported delimiter. Use one of [' ' | ',' | ';' | '\t']\n");
+                        exit_err("Unsupported delimiter. Use one of [' ' | ',' | ';' | <tab>]\n");
                 }
                 break;
             }
@@ -194,6 +208,18 @@ void parse_options(const char **argv, int argc, Config *opts) {
                     exit_err("Missing value for cube size.\n");
                 }
                 opts->cube_size = atoi(argv[i + 1]);
+                break;
+            case 'f':
+                if (!next_exists) {
+                    exit_err("Missing value for cube size.\n");
+                }
+                if (!strcmp(argv[i + 1], "cube")) {
+                    opts->format = RESOLVE_CUBE;
+                } else if (!strcmp(argv[i + 1], "spi")) {
+                    opts->format = SONY_SPI3D;
+                } else {
+                    exit_err("Unsupported LUT format. Use one of [cube | spi]\n");
+                }
                 break;
             case 's':
                 if (!next_exists) {
@@ -212,9 +238,56 @@ void parse_options(const char **argv, int argc, Config *opts) {
                     exit_err("Missing value for smoothing.\n");
                 }
                 opts->smoothing = atof(argv[i + 1]);
+                break;
+            default:
+                exit_err("Unkown argument. Check -h for help.\n");
             }
         }
     }
+}
+
+void write_lut(ae::real_1d_array lut, Config *opts) {
+    std::ofstream lut_file;
+    lut_file.open(opts->output);
+
+    if (lut_file.fail()) {
+        exit_err("Could not open LUT file.\n");
+    }
+
+    switch (opts->format) {
+    case RESOLVE_CUBE:
+        lut_file << "LUT_3D_SIZE " << opts->cube_size << "\n";
+
+        for (ae::ae_int_t i = 0; i < cube_i(opts->cube_size); i += 1) {
+            lut_file
+                << std::fixed
+                << std::setprecision(opts->precision)
+                << std::format("{} {} {}\n", lut[3 * i], lut[3 * i + 1], lut[3 * i + 2]);
+        }
+        break;
+    case SONY_SPI3D:
+        lut_file << std::format("SPILUT 1.0\n3 3\n{0} {0} {0}\n", opts->cube_size);
+
+        /* https://github.com/AcademySoftwareFoundation/OpenColorIO/blob/
+           c429400170ccd34902d8a6b26e70c43e26d57751/src/OpenColorIO/fileformats/FileFormatSpi3D.cpp#L294 */
+        for (ae::ae_int_t i = 0; i < cube_i(opts->cube_size); i += 1) {
+            lut_file
+                << std::fixed
+                << std::setprecision(opts->precision)
+                << std::format(
+                    "{} {} {} {} {} {}\n",
+                    i / sqr_i(opts->cube_size),
+                    (i / opts->cube_size) % opts->cube_size,
+                    i % opts->cube_size,
+                    lut[3 * i],
+                    lut[3 * i + 1],
+                    lut[3 * i + 2]);
+        }
+    }
+
+    lut_file.close();
+
+    printf("Created LUT '%s'.\n", opts->output.c_str());
 }
 
 int main(int argc, const char **argv) {
@@ -233,40 +306,16 @@ int main(int argc, const char **argv) {
         .delimiter = ' ',
         .precision = 8,
         .cube_size = 33,
+        .format = RESOLVE_CUBE,
         .basis_size = 1.0,
         .layers = 5,
         .smoothing = 0.0,
     };
 
-    parse_options(argv, argc, &opts);
+    parse_options(&opts, argv, argc);
 
     ae::real_2d_array concat_points = load_points(&opts);
     ae::real_1d_array res = build_lut(concat_points, &opts);
 
-    std::ofstream lut_file;
-    lut_file.open(opts.output);
-
-    if (lut_file.fail()) {
-        exit_err("Could not open LUT file.\n");
-    }
-
-    lut_file << "LUT_3D_SIZE " << opts.cube_size << "\n\n";
-
-    for (ae::ae_int_t i = 0; i < opts.cube_size * opts.cube_size * opts.cube_size; i += 1) {
-        lut_file
-            << std::fixed
-            << std::setprecision(opts.precision)
-            << res[3 * i]
-            << ' '
-            << res[3 * i + 1]
-            << ' '
-            << res[3 * i + 2]
-            << '\n';
-    }
-
-    lut_file.close();
-
-    printf("Created LUT '%s'.\n", opts.output.c_str());
-
-    return 0;
+    write_lut(res, &opts);
 }
