@@ -60,7 +60,6 @@ enum Lut_Format {
     SONY_SPI3D,
 };
 
-// TODO: Specify LUT format.
 struct Config {
     // Paths to dataset files.
     std::string source_path;
@@ -211,7 +210,7 @@ void parse_options(Config *opts, const char **argv, int argc) {
                 break;
             case 'f':
                 if (!next_exists) {
-                    exit_err("Missing value for cube size.\n");
+                    exit_err("Missing value for LUT format.\n");
                 }
                 if (!strcmp(argv[i + 1], "cube")) {
                     opts->format = RESOLVE_CUBE;
@@ -240,7 +239,7 @@ void parse_options(Config *opts, const char **argv, int argc) {
                 opts->smoothing = atof(argv[i + 1]);
                 break;
             default:
-                exit_err("Unkown argument. Check -h for help.\n");
+                exit_err("Unkown option. Check -h for help.\n");
             }
         }
     }
@@ -248,14 +247,19 @@ void parse_options(Config *opts, const char **argv, int argc) {
 
 void write_lut(ae::real_1d_array lut, Config *opts) {
     std::ofstream lut_file;
-    lut_file.open(opts->output);
-
-    if (lut_file.fail()) {
-        exit_err("Could not open LUT file.\n");
-    }
 
     switch (opts->format) {
     case RESOLVE_CUBE:
+        if (opts->output == "") {
+            opts->output = "output.cube";
+        }
+
+        lut_file.open(opts->output);
+
+        if (lut_file.fail()) {
+            exit_err("Could not open Cube LUT file.\n");
+        }
+
         lut_file << "LUT_3D_SIZE " << opts->cube_size << "\n";
 
         for (ae::ae_int_t i = 0; i < cube_i(opts->cube_size); i += 1) {
@@ -266,6 +270,16 @@ void write_lut(ae::real_1d_array lut, Config *opts) {
         }
         break;
     case SONY_SPI3D:
+        if (opts->output == "") {
+            opts->output = "output.spi3d";
+        }
+
+        lut_file.open(opts->output);
+
+        if (lut_file.fail()) {
+            exit_err("Could not open SPI3D LUT file.\n");
+        }
+
         lut_file << std::format("SPILUT 1.0\n3 3\n{0} {0} {0}\n", opts->cube_size);
 
         /* https://github.com/AcademySoftwareFoundation/OpenColorIO/blob/
@@ -302,7 +316,7 @@ int main(int argc, const char **argv) {
     Config opts = {
         .source_path = argv[1],
         .target_path = argv[2],
-        .output = "output.cube",
+        .output = "",
         .delimiter = ' ',
         .precision = 8,
         .cube_size = 33,
