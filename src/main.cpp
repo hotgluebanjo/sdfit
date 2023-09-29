@@ -288,7 +288,7 @@ void write_lut(ae::real_1d_array lut, Config *opts) {
 
         /*
         The indices are swizzled in other implementations, but their ordering of entries must
-        be different. This works in OCIO.
+        be different. It doesn't matter in SPI3D as the indices are explicit. This works in OCIO.
 
         https://github.com/AcademySoftwareFoundation/OpenColorIO/blob/
         c429400170ccd34902d8a6b26e70c43e26d57751/src/OpenColorIO/fileformats/FileFormatSpi3D.cpp#L294
