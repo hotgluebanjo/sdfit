@@ -10,4 +10,4 @@ if ($build_lib) {
 }
 
 zig c++ $flags -c ./src/main.cpp -o ./target/main.obj
-zig c++ $flags ./target/main.obj $(dir ./target/alglib/*.obj) -o ./target/rbf-interp.exe
+zig c++ $flags ./target/main.obj $(dir ./target/alglib/*.obj) -o ./target/suntr.exe

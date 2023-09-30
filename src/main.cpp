@@ -93,11 +93,11 @@ struct Config {
 };
 
 void print_help() {
-    printf("rbf-interp v0.1.0\n");
-    printf("Scattered data interpolation for tristimulus lookup tables.\n");
+    printf("sundaytrained v0.1.0\n");
+    printf("Scattered data fitting for tristimulus lookup tables.\n");
     printf("https://github.com/hotgluebanjo\n\n");
-    printf("USAGE: rbf-interp <source> <target> [OPTIONS]\n\n");
-    printf("EXAMPLE: rbf-interp alexa.csv print-film.csv -d ',' -o alexa_to_print_film.cube\n\n");
+    printf("USAGE: suntr <source> <target> [OPTIONS]\n\n");
+    printf("EXAMPLE: suntr alexa.csv print-film.csv -d ',' -o alexa_to_print_film.cube\n\n");
     printf("INPUTS:\n");
     printf("  <source>   Plaintext file containing source dataset\n");
     printf("  <target>   Plaintext file containing target dataset\n\n");
