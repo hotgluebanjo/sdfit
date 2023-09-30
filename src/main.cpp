@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <string>
 
+#include "../alglib/dataanalysis.h"
 #include "../alglib/interpolation.h"
 #include "../alglib/stdafx.h"
 
@@ -316,31 +317,49 @@ void write_lut(ae::real_1d_array lut, Config *opts) {
 }
 
 int main(int argc, const char **argv) {
-    if (argc == 1 || !strcmp(argv[1], "-h")) {
-        print_help();
-    }
+    // if (argc == 1 || !strcmp(argv[1], "-h")) {
+    //     print_help();
+    // }
 
-    if (argc == 2) {
-        exit_err("Missing target dataset.\n");
-    }
+    // if (argc == 2) {
+    //     exit_err("Missing target dataset.\n");
+    // }
 
-    Config opts = {
-        .source_path = argv[1],
-        .target_path = argv[2],
-        .output = "",
-        .delimiter = ' ',
-        .precision = 8,
-        .cube_size = 33,
-        .format = RESOLVE_CUBE,
-        .basis_size = 5.0,
-        .layers = 5,
-        .smoothing = 0.0,
-    };
+    // Config opts = {
+    //     .source_path = argv[1],
+    //     .target_path = argv[2],
+    //     .output = "",
+    //     .delimiter = ' ',
+    //     .precision = 8,
+    //     .cube_size = 33,
+    //     .format = RESOLVE_CUBE,
+    //     .basis_size = 5.0,
+    //     .layers = 5,
+    //     .smoothing = 0.0,
+    // };
 
-    parse_options(&opts, argv, argc);
+    // parse_options(&opts, argv, argc);
 
-    ae::real_2d_array concat_points = load_points(&opts);
-    ae::real_1d_array res = build_lut(concat_points, &opts);
+    // ae::real_2d_array concat_points = load_points(&opts);
+    // ae::real_1d_array res = build_lut(concat_points, &opts);
 
-    write_lut(res, &opts);
+    // write_lut(res, &opts);
+    ae::real_2d_array source, target;
+    ae::read_csv("test_data/p4k.txt", ' ', 0, source);
+    ae::read_csv("test_data/alexa.txt", ' ', 0, target);
+    ae::real_2d_array data = hstack(source, target);
+
+    ae::mlptrainer trn;
+    ae::mlpcreatetrainer(3, 3, trn);
+    ae::mlpsetdataset(trn, data, data.rows());
+
+    ae::multilayerperceptron network;
+    ae::mlpcreate1(3, 5, 3, network); // 5 hidden layers. 3x5x3 (3 in, 3 out)
+
+    ae::mlpreport rep;
+    ae::mlptrainnetwork(trn, network, 5, rep); // 5 restarts
+    ae::real_1d_array p = "[0.23200172185897827, 0.17972472310066223, 0.15904557704925537]";
+    ae::real_1d_array res;
+    ae::mlpprocess(network, p, res);
+    std::cout << res.tostring(8);
 }
