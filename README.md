@@ -1,6 +1,6 @@
 # Sunday-Trained
 
-Match imaging systems from CSV-type datasets.
+Match imaging systems from DSV datasets.
 
 This is a reimplementation of an old [Python wrapper](https://gist.github.com/hotgluebanjo/0b8bcd6540d587e53191a57ffccfdc29#file-rbf_vector-py) around [ALGLIB](https://www.alglib.net/)'s superb RBF implementation. That version is now in [`camera_match`](https://github.com/ethan-ou/camera-match).
 

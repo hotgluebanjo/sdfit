@@ -92,7 +92,7 @@ struct Config {
     // Output LUT.
     std::string output;
 
-    // Dataset XSV delimiter.
+    // Dataset DSV delimiter.
     char delimiter;
 
     // LUT print precision.
@@ -220,16 +220,16 @@ ae::real_2d_array load_points(Config *opts) {
         ae::read_csv(opts->source_path.c_str(), opts->delimiter, 0, source);
         ae::read_csv(opts->target_path.c_str(), opts->delimiter, 0, target);
     } catch (...) {
-        exit_err("Could not read XSV. Check that the file exists and has real Nx3 contents.\n");
+        exit_err("Could not read DSV. Check that the file exists and has real Nx3 contents.\n");
     }
 
     // --- Sanity checks. TODO: Reader? --- //
 
-    if (source.rows() == 0) exit_err("No readable XSV content in source.\n");
-    if (target.rows() == 0) exit_err("No readable XSV content in target.\n");
+    if (source.rows() == 0) exit_err("No readable DSV content in source.\n");
+    if (target.rows() == 0) exit_err("No readable DSV content in target.\n");
 
     if (source.rows() != target.rows())
-        exit_err("Source and target do not have the same number of XSV rows.\n");
+        exit_err("Source and target do not have the same number of DSV rows.\n");
 
     if (target.cols() != 3)
         exit_err("Source contains non-triplet rows. This may be because the delimiter is wrong.\n");
