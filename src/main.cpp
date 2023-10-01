@@ -55,12 +55,24 @@ ae::real_2d_array hstack(ae::real_2d_array x, ae::real_2d_array y) {
     return res;
 }
 
+enum Method {
+    RBF,
+    MLP,
+};
+
 enum Lut_Format {
     RESOLVE_CUBE,
     SONY_SPI3D,
 };
 
+// TODO: Massive.
 struct Config {
+    // Supported:
+    // - RBF interpolation
+    // - MLP neural network
+    // TODO: Lattice regression?
+    Method mode;
+
     // Paths to dataset files.
     std::string source_path;
     std::string target_path;
@@ -93,8 +105,71 @@ struct Config {
     double smoothing;
 };
 
+// TODO: Return LUT.
+ae::real_1d_array build_lut_rbf(ae::real_2d_array points, Config *opts) {
+    assert(points.cols() == 6); // 2 * 3D
+
+    ae::rbfmodel model;
+    ae::rbfcreate(3, 3, model);
+
+    // TODO: DDM solver?
+    ae::rbfsetpoints(model, points);
+    ae::rbfsetalgohierarchical(model, opts->basis_size, opts->layers, opts->smoothing);
+
+    // TODO: Report errors? Print solve error. Also speed.
+    ae::rbfreport rep;
+    ae::rbfbuildmodel(model, rep);
+
+    ae::real_1d_array grid = linspace(0.0, 1.0, opts->cube_size);
+
+    ae::real_1d_array res;
+    rbfgridcalc3v(model, grid, opts->cube_size, grid, opts->cube_size, grid, opts->cube_size, res);
+
+    return res;
+}
+
+ae::real_1d_array build_lut_mlp(ae::real_2d_array points, Config *opts) {
+    assert(points.cols() == 6); // 2 * 3D
+
+    ae::mlptrainer trn;
+    ae::mlpcreatetrainer(3, 3, trn);
+    ae::mlpsetdataset(trn, points, points.rows());
+
+    ae::multilayerperceptron network;
+    ae::mlpcreate1(3, 5, 3, network); // 5 hidden layers. 3x5x3 (3 in, 3 out)
+
+    ae::mlpreport rep;
+    ae::mlptrainnetwork(trn, network, 5, rep); // 5 restarts
+
+    ae::real_1d_array grid = linspace(0.0, 1.0, opts->cube_size);
+    ae::real_1d_array res;
+    res.setlength(3 * cube_i(opts->cube_size));
+
+    for (int i = 0; i < cube_i(opts->cube_size); i += 1) {
+        ae::ae_int_t x = i % opts->cube_size;
+        ae::ae_int_t y = (i / opts->cube_size) % opts->cube_size;
+        ae::ae_int_t z = i / sqr_i(opts->cube_size);
+
+        // TODO
+        ae::real_1d_array p;
+        p.setlength(3);
+
+        p[0] = grid[x];
+        p[1] = grid[y];
+        p[2] = grid[z];
+
+        ae::real_1d_array v;
+        ae::mlpprocess(network, p, v);
+        res[3 * i + 0] = v[0];
+        res[3 * i + 1] = v[1];
+        res[3 * i + 2] = v[2];
+    }
+
+    return res;
+}
+
 void print_help() {
-    printf("sundaytrained v0.1.0\n");
+    printf("sundaytrained v0.2.0\n");
     printf("Scattered data fitting for tristimulus lookup tables.\n");
     printf("https://github.com/hotgluebanjo\n\n");
     printf("USAGE: suntr <source> <target> [OPTIONS]\n\n");
@@ -140,29 +215,6 @@ ae::real_2d_array load_points(Config *opts) {
         exit_err("Target contains non-triplet rows. This may be because the delimiter is wrong.\n");
 
     return hstack(source, target);
-}
-
-// TODO: Return LUT.
-ae::real_1d_array build_lut(ae::real_2d_array points, Config *opts) {
-    assert(points.cols() == 6); // 2 * 3D
-
-    ae::rbfmodel model;
-    ae::rbfcreate(3, 3, model);
-
-    // TODO: DDM solver?
-    ae::rbfsetpoints(model, points);
-    ae::rbfsetalgohierarchical(model, opts->basis_size, opts->layers, opts->smoothing);
-
-    // TODO: Report errors? Print solve error. Also speed.
-    ae::rbfreport rep;
-    ae::rbfbuildmodel(model, rep);
-
-    ae::real_1d_array grid = linspace(0.0, 1.0, opts->cube_size);
-
-    ae::real_1d_array res;
-    rbfgridcalc3v(model, grid, opts->cube_size, grid, opts->cube_size, grid, opts->cube_size, res);
-
-    return res;
 }
 
 // Very primitive option parsing. Uses atoi/f, so don't mess up the input.
@@ -317,49 +369,40 @@ void write_lut(ae::real_1d_array lut, Config *opts) {
 }
 
 int main(int argc, const char **argv) {
-    // if (argc == 1 || !strcmp(argv[1], "-h")) {
-    //     print_help();
-    // }
+    if (argc == 1 || !strcmp(argv[1], "-h")) {
+        print_help();
+    }
 
-    // if (argc == 2) {
-    //     exit_err("Missing target dataset.\n");
-    // }
+    if (argc == 2) {
+        exit_err("Missing target dataset.\n");
+    }
 
-    // Config opts = {
-    //     .source_path = argv[1],
-    //     .target_path = argv[2],
-    //     .output = "",
-    //     .delimiter = ' ',
-    //     .precision = 8,
-    //     .cube_size = 33,
-    //     .format = RESOLVE_CUBE,
-    //     .basis_size = 5.0,
-    //     .layers = 5,
-    //     .smoothing = 0.0,
-    // };
+    Config opts = {
+        .mode = MLP,
+        .source_path = argv[1],
+        .target_path = argv[2],
+        .output = "",
+        .delimiter = ' ',
+        .precision = 8,
+        .cube_size = 33,
+        .format = RESOLVE_CUBE,
+        .basis_size = 5.0,
+        .layers = 5,
+        .smoothing = 0.0,
+    };
 
-    // parse_options(&opts, argv, argc);
+    parse_options(&opts, argv, argc);
 
-    // ae::real_2d_array concat_points = load_points(&opts);
-    // ae::real_1d_array res = build_lut(concat_points, &opts);
+    ae::real_2d_array concat_points = load_points(&opts);
+    ae::real_1d_array lut;
 
-    // write_lut(res, &opts);
-    ae::real_2d_array source, target;
-    ae::read_csv("test_data/p4k.txt", ' ', 0, source);
-    ae::read_csv("test_data/alexa.txt", ' ', 0, target);
-    ae::real_2d_array data = hstack(source, target);
+    switch (opts.mode) {
+    case RBF:
+        lut = build_lut_rbf(concat_points, &opts);
+        break;
+    case MLP:
+        lut = build_lut_mlp(concat_points, &opts);
+    }
 
-    ae::mlptrainer trn;
-    ae::mlpcreatetrainer(3, 3, trn);
-    ae::mlpsetdataset(trn, data, data.rows());
-
-    ae::multilayerperceptron network;
-    ae::mlpcreate1(3, 5, 3, network); // 5 hidden layers. 3x5x3 (3 in, 3 out)
-
-    ae::mlpreport rep;
-    ae::mlptrainnetwork(trn, network, 5, rep); // 5 restarts
-    ae::real_1d_array p = "[0.23200172185897827, 0.17972472310066223, 0.15904557704925537]";
-    ae::real_1d_array res;
-    ae::mlpprocess(network, p, res);
-    std::cout << res.tostring(8);
+    write_lut(lut, &opts);
 }
