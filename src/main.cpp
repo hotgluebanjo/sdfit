@@ -17,6 +17,19 @@ namespace ae = alglib;
 #define sqr_i(v) (v * v)
 #define cube_i(v) (v * v * v)
 
+union Int3 {
+    struct {
+        int x;
+        int y;
+        int z;
+    };
+    int xyz[3];
+};
+
+Int3 index_3d_from_1d(int i, int size) {
+    return {i % size, (i / size) % size, i / sqr_i(size)};
+}
+
 ae::real_1d_array linspace(double start, double end, size_t steps) {
     ae::real_1d_array res;
     res.setlength(steps);
@@ -55,7 +68,7 @@ ae::real_2d_array hstack(ae::real_2d_array x, ae::real_2d_array y) {
     return res;
 }
 
-enum Method {
+enum Fit_Method {
     RBF,
     MLP,
 };
@@ -71,7 +84,7 @@ struct Config {
     // - RBF interpolation
     // - MLP neural network
     // TODO: Lattice regression?
-    Method mode;
+    Fit_Method mode;
 
     // Paths to dataset files.
     std::string source_path;
@@ -146,20 +159,19 @@ ae::real_1d_array build_lut_mlp(ae::real_2d_array points, Config *opts) {
     res.setlength(3 * cube_i(opts->cube_size));
 
     for (int i = 0; i < cube_i(opts->cube_size); i += 1) {
-        ae::ae_int_t x = i % opts->cube_size;
-        ae::ae_int_t y = (i / opts->cube_size) % opts->cube_size;
-        ae::ae_int_t z = i / sqr_i(opts->cube_size);
+        Int3 i_3d = index_3d_from_1d(i, opts->cube_size);
 
         // TODO
         ae::real_1d_array p;
         p.setlength(3);
 
-        p[0] = grid[x];
-        p[1] = grid[y];
-        p[2] = grid[z];
+        p[0] = grid[i_3d.x];
+        p[1] = grid[i_3d.y];
+        p[2] = grid[i_3d.z];
 
         ae::real_1d_array v;
         ae::mlpprocess(network, p, v);
+
         res[3 * i + 0] = v[0];
         res[3 * i + 1] = v[1];
         res[3 * i + 2] = v[2];
@@ -179,6 +191,7 @@ void print_help() {
     printf("  <target>   Plaintext file containing target dataset\n\n");
     printf("OPTIONS:\n");
     printf("  -h   Help\n");
+    printf("  -m   Method to use [mlp | rbf]              default: mlp\n");
     printf("  -o   Output path and name                   default: 'output.cube'\n");
     printf("  -d   Dataset delimiter [' ' | ',' | <tab>]  default: ' ' (space)\n");
     printf("  -p   LUT print precision                    default: 8\n");
@@ -225,6 +238,18 @@ void parse_options(Config *opts, const char **argv, int argc) {
             switch (argv[i][1]) {
             case 'h':
                 print_help();
+            case 'm':
+                if (!next_exists) {
+                    exit_err("Missing value for method.\n");
+                }
+                if (!strcmp(argv[i + 1], "rbf")) {
+                    opts->mode = RBF;
+                } else if (!strcmp(argv[i + 1], "mlp")) {
+                    opts->mode = MLP;
+                } else {
+                    exit_err("Unsupported method. Use one of [mlp | rbf]\n");
+                }
+                break;
             case 'o':
                 if (!next_exists) {
                     exit_err("Missing value for output name.\n");
@@ -347,16 +372,14 @@ void write_lut(ae::real_1d_array lut, Config *opts) {
         c429400170ccd34902d8a6b26e70c43e26d57751/src/OpenColorIO/fileformats/FileFormatSpi3D.cpp#L294
         */
         for (ae::ae_int_t i = 0; i < cube_i(opts->cube_size); i += 1) {
-            ae::ae_int_t x = i % opts->cube_size;
-            ae::ae_int_t y = (i / opts->cube_size) % opts->cube_size;
-            ae::ae_int_t z = i / sqr_i(opts->cube_size);
+            Int3 i_3d = index_3d_from_1d(i, opts->cube_size);
 
             lut_file
                 << std::fixed
                 << std::setprecision(opts->precision)
-                << x << ' '
-                << y << ' '
-                << z << ' '
+                << i_3d.x << ' '
+                << i_3d.y << ' '
+                << i_3d.z << ' '
                 << lut[3 * i + 0] << ' '
                 << lut[3 * i + 1] << ' '
                 << lut[3 * i + 2] << '\n';
