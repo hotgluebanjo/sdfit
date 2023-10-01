@@ -78,7 +78,6 @@ enum Lut_Format {
     SONY_SPI3D,
 };
 
-// TODO: Massive.
 struct Config {
     // Supported:
     // - RBF interpolation
@@ -109,13 +108,19 @@ struct Config {
     Lut_Format format;
 
     // RBase gaussian size.
-    double basis_size;
+    double rbf_size;
 
     // Number of hierarchical model layers.
-    ae::ae_int_t layers;
+    ae::ae_int_t rbf_layers;
 
     // Optional smoothing.
-    double smoothing;
+    double rbf_smoothing;
+
+    // Hidden layers.
+    ae::ae_int_t mlp_layers;
+
+    // Random restarts.
+    ae::ae_int_t mlp_restarts;
 };
 
 // TODO: Return LUT.
@@ -127,7 +132,7 @@ ae::real_1d_array build_lut_rbf(ae::real_2d_array points, Config *opts) {
 
     // TODO: DDM solver?
     ae::rbfsetpoints(model, points);
-    ae::rbfsetalgohierarchical(model, opts->basis_size, opts->layers, opts->smoothing);
+    ae::rbfsetalgohierarchical(model, opts->rbf_size, opts->rbf_layers, opts->rbf_smoothing);
 
     // TODO: Report errors? Print solve error. Also speed.
     ae::rbfreport rep;
@@ -149,16 +154,16 @@ ae::real_1d_array build_lut_mlp(ae::real_2d_array points, Config *opts) {
     ae::mlpsetdataset(trn, points, points.rows());
 
     ae::multilayerperceptron network;
-    ae::mlpcreate1(3, 5, 3, network); // 5 hidden layers. 3x5x3 (3 in, 3 out)
+    ae::mlpcreate1(3, opts->mlp_layers, 3, network); // 5 hidden layers would be 3x5x3 (3 in, 3 out)
 
     ae::mlpreport rep;
-    ae::mlptrainnetwork(trn, network, 5, rep); // 5 restarts
+    ae::mlptrainnetwork(trn, network, opts->mlp_restarts, rep);
 
     ae::real_1d_array grid = linspace(0.0, 1.0, opts->cube_size);
     ae::real_1d_array res;
     res.setlength(3 * cube_i(opts->cube_size));
 
-    for (int i = 0; i < cube_i(opts->cube_size); i += 1) {
+    for (ae::ae_int_t i = 0; i < cube_i(opts->cube_size); i += 1) {
         Int3 i_3d = index_3d_from_1d(i, opts->cube_size);
 
         // TODO
@@ -181,11 +186,13 @@ ae::real_1d_array build_lut_mlp(ae::real_2d_array points, Config *opts) {
 }
 
 void print_help() {
-    printf("sundaytrained v0.2.0\n");
+    printf("Sunday-Trained v0.2.0\n");
     printf("Scattered data fitting for tristimulus lookup tables.\n");
     printf("https://github.com/hotgluebanjo\n\n");
     printf("USAGE: suntr <source> <target> [OPTIONS]\n\n");
-    printf("EXAMPLE: suntr alexa.csv print-film.csv -d ',' -o alexa_to_print_film.cube\n\n");
+    printf("EXAMPLES:\n");
+    printf("  suntr alexa.csv print-film.csv -d ',' -o alexa_to_print_film.cube\n");
+    printf("  suntr venice.txt alexa.txt -m rbf -p 6 -f spi -o venice_to_alexa.spi3d\n\n");
     printf("INPUTS:\n");
     printf("  <source>   Plaintext file containing source dataset\n");
     printf("  <target>   Plaintext file containing target dataset\n\n");
@@ -200,6 +207,8 @@ void print_help() {
     printf("  -s   RBF basis size                         default: 5.0\n");
     printf("  -l   RBF layers                             default: 5\n");
     printf("  -z   RBF smoothing                          default: 0.0\n");
+    printf("  -L   MLP layers                             default: 5\n");
+    printf("  -r   MLP restarts                           default: 5\n");
     exit(1);
 }
 
@@ -299,21 +308,33 @@ void parse_options(Config *opts, const char **argv, int argc) {
                 break;
             case 's':
                 if (!next_exists) {
-                    exit_err("Missing value for basis size.\n");
+                    exit_err("Missing value for RBF basis size.\n");
                 }
-                opts->basis_size = atof(argv[i + 1]);
+                opts->rbf_size = atof(argv[i + 1]);
                 break;
             case 'l':
                 if (!next_exists) {
-                    exit_err("Missing value for N-layers.\n");
+                    exit_err("Missing value for RBF N-layers.\n");
                 }
-                opts->layers = atoi(argv[i + 1]);
+                opts->rbf_layers = atoi(argv[i + 1]);
                 break;
             case 'z':
                 if (!next_exists) {
-                    exit_err("Missing value for smoothing.\n");
+                    exit_err("Missing value for RBF smoothing.\n");
                 }
-                opts->smoothing = atof(argv[i + 1]);
+                opts->rbf_smoothing = atof(argv[i + 1]);
+                break;
+            case 'L':
+                if (!next_exists) {
+                    exit_err("Missing value for MLP layers.\n");
+                }
+                opts->mlp_layers = atoi(argv[i + 1]);
+                break;
+            case 'r':
+                if (!next_exists) {
+                    exit_err("Missing value for MLP restarts.\n");
+                }
+                opts->mlp_restarts = atoi(argv[i + 1]);
                 break;
             default:
                 exit_err("Unkown option. Check -h for help.\n");
@@ -409,9 +430,11 @@ int main(int argc, const char **argv) {
         .precision = 8,
         .cube_size = 33,
         .format = RESOLVE_CUBE,
-        .basis_size = 5.0,
-        .layers = 5,
-        .smoothing = 0.0,
+        .rbf_size = 5.0,
+        .rbf_layers = 5,
+        .rbf_smoothing = 0.0,
+        .mlp_layers = 5,
+        .mlp_restarts = 5,
     };
 
     parse_options(&opts, argv, argc);
