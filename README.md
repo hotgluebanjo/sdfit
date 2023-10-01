@@ -2,9 +2,9 @@
 
 Match imaging systems from DSV datasets.
 
-This is a static redo of an [old Python wrapper](https://gist.github.com/hotgluebanjo/0b8bcd6540d587e53191a57ffccfdc29#file-rbf_vector-py) around [ALGLIB](https://www.alglib.net/)'s superb [RBF implementation](https://www.alglib.net/interpolation/fastrbf.php). That version is now a part of [`camera_match`](https://github.com/ethan-ou/camera-match).
+This is a static redo of an [old Python wrapper](https://gist.github.com/hotgluebanjo/7dc7ed6568249b430abd4a56788a4b77) around [ALGLIB](https://www.alglib.net/)'s superb [RBF implementation](https://www.alglib.net/interpolation/fastrbf.php). That version is now a part of [`camera_match`](https://github.com/ethan-ou/camera-match).
 
-Sunday-Trained also parameterizes the neural network included in ALGLIB as `mlp`.
+Along with RBF, Sunday-Trained parameterizes the neural network included in ALGLIB as `mlp`.
 
 ## Usage
 
