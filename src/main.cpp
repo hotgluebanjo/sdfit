@@ -186,13 +186,13 @@ ae::real_1d_array build_lut_mlp(ae::real_2d_array points, Config *opts) {
 }
 
 void print_help() {
-    printf("Sunday-Trained v0.2.0\n");
+    printf("sdfit v0.2.0\n");
     printf("Scattered data fitting for tristimulus lookup tables.\n");
     printf("https://github.com/hotgluebanjo\n\n");
-    printf("USAGE: suntr <source> <target> [OPTIONS]\n\n");
+    printf("USAGE: sdfit <source> <target> [OPTIONS]\n\n");
     printf("EXAMPLES:\n");
-    printf("  suntr alexa.csv print-film.csv -d ',' -o alexa_to_print_film.cube\n");
-    printf("  suntr venice.txt alexa.txt -m rbf -p 6 -f spi -o venice_to_alexa.spi3d\n\n");
+    printf("  sdfit alexa.csv print-film.csv -d ',' -o alexa_to_print_film.cube\n");
+    printf("  sdfit venice.txt alexa.txt -m rbf -p 6 -f spi -o venice_to_alexa.spi3d\n\n");
     printf("INPUTS:\n");
     printf("  <source>   Plaintext file containing source dataset\n");
     printf("  <target>   Plaintext file containing target dataset\n\n");

@@ -1,27 +1,27 @@
-# Sunday-Trained
+# `sdfit`
 
 Match imaging systems from DSV datasets.
 
 This is a static redo of an [old Python wrapper](https://gist.github.com/hotgluebanjo/7dc7ed6568249b430abd4a56788a4b77) around [ALGLIB](https://www.alglib.net/)'s superb [RBF implementation](https://www.alglib.net/interpolation/fastrbf.php). That version is now a part of [`camera_match`](https://github.com/ethan-ou/camera-match).
 
-Along with RBF, Sunday-Trained parameterizes the neural network included in ALGLIB as `mlp`.
+Along with RBF, `sdfit` parameterizes the neural network included in ALGLIB as `mlp`.
 
 ## Usage
 
 ```
-suntr -h
+sdfit -h
 ```
 
 ```
-Sunday-Trained v0.2.0
+sdfit v0.2.0
 Scattered data fitting for tristimulus lookup tables.
 https://github.com/hotgluebanjo
 
-USAGE: suntr <source> <target> [OPTIONS]
+USAGE: sdfit <source> <target> [OPTIONS]
 
 EXAMPLES:
-  suntr alexa.csv print-film.csv -d ',' -o alexa_to_print_film.cube
-  suntr venice.txt alexa.txt -m rbf -p 6 -f spi -o venice_to_alexa.spi3d
+  sdfit alexa.csv print-film.csv -d ',' -o alexa_to_print_film.cube
+  sdfit venice.txt alexa.txt -m rbf -p 6 -f spi -o venice_to_alexa.spi3d
 
 INPUTS:
   <source>   Plaintext file containing source dataset
