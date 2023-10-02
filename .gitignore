@@ -1,5 +1,6 @@
 *.exe
 *.pdb
 *.lib
-/target/
 /alglib/
+/release/
+/target/
