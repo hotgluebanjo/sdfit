@@ -7,9 +7,9 @@
 #include <stdlib.h>
 #include <string>
 
-#include "../alglib/dataanalysis.h"
-#include "../alglib/interpolation.h"
-#include "../alglib/stdafx.h"
+#include "alglib/dataanalysis.h"
+#include "alglib/interpolation.h"
+#include "alglib/stdafx.h"
 
 namespace ae = alglib;
 

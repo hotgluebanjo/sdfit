@@ -9,5 +9,6 @@ if ($build_lib) {
     }
 }
 
-zig c++ $flags -c ./src/main.cpp -o ./target/main.obj
+# Won't link combined.
+zig c++ $flags -I . -c ./src/main.cpp -o ./target/main.obj
 zig c++ $flags ./target/main.obj $(dir ./target/alglib/*.obj) -o ./target/sdfit.exe
