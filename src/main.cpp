@@ -124,7 +124,7 @@ struct Config {
 };
 
 // TODO: Return LUT.
-ae::real_1d_array build_lut_rbf(ae::real_2d_array points, Config *opts) {
+ae::real_1d_array build_lut_rbf(ae::real_2d_array points, Config *opts, ae::rbfreport *rep) {
     assert(points.cols() == 6); // 2 * 3D
 
     ae::rbfmodel model;
@@ -135,8 +135,7 @@ ae::real_1d_array build_lut_rbf(ae::real_2d_array points, Config *opts) {
     ae::rbfsetalgohierarchical(model, opts->rbf_size, opts->rbf_layers, opts->rbf_smoothing);
 
     // TODO: Report errors? Print solve error. Also speed.
-    ae::rbfreport rep;
-    ae::rbfbuildmodel(model, rep);
+    ae::rbfbuildmodel(model, *rep);
 
     ae::real_1d_array grid = linspace(0.0, 1.0, opts->cube_size);
 
@@ -146,7 +145,7 @@ ae::real_1d_array build_lut_rbf(ae::real_2d_array points, Config *opts) {
     return res;
 }
 
-ae::real_1d_array build_lut_mlp(ae::real_2d_array points, Config *opts) {
+ae::real_1d_array build_lut_mlp(ae::real_2d_array points, Config *opts, ae::mlpreport *rep) {
     assert(points.cols() == 6); // 2 * 3D
 
     ae::mlptrainer trn;
@@ -156,8 +155,7 @@ ae::real_1d_array build_lut_mlp(ae::real_2d_array points, Config *opts) {
     ae::multilayerperceptron network;
     ae::mlpcreate1(3, opts->mlp_layers, 3, network); // 5 hidden layers would be 3x5x3 (3 in, 3 out)
 
-    ae::mlpreport rep;
-    ae::mlptrainnetwork(trn, network, opts->mlp_restarts, rep);
+    ae::mlptrainnetwork(trn, network, opts->mlp_restarts, *rep);
 
     ae::real_1d_array grid = linspace(0.0, 1.0, opts->cube_size);
     ae::real_1d_array res;
@@ -408,8 +406,6 @@ void write_lut(ae::real_1d_array lut, Config *opts) {
     }
 
     lut_file.close();
-
-    printf("Created LUT '%s'.\n", opts->output.c_str());
 }
 
 int main(int argc, const char **argv) {
@@ -443,12 +439,19 @@ int main(int argc, const char **argv) {
     ae::real_1d_array lut;
 
     switch (opts.mode) {
-    case RBF:
-        lut = build_lut_rbf(concat_points, &opts);
+    case RBF: {
+        ae::rbfreport report;
+        lut = build_lut_rbf(concat_points, &opts, &report);
+        printf("Built LUT. RMS error: %f, Max error: %f\n", report.rmserror, report.maxerror);
         break;
-    case MLP:
-        lut = build_lut_mlp(concat_points, &opts);
+    }
+    case MLP: {
+        ae::mlpreport report;
+        lut = build_lut_mlp(concat_points, &opts, &report);
+        printf("Built LUT. RMS error: %f\n", report.rmserror);
+    }
     }
 
     write_lut(lut, &opts);
+    printf("Created LUT '%s'.\n", opts.output.c_str());
 }
