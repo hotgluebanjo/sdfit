@@ -123,18 +123,15 @@ struct Config {
     ae::ae_int_t mlp_restarts;
 };
 
-// TODO: Return LUT.
+// TODO: DDM solver, speed.
 ae::real_1d_array build_lut_rbf(ae::real_2d_array points, Config *opts, ae::rbfreport *rep) {
     assert(points.cols() == 6); // 2 * 3D
 
     ae::rbfmodel model;
     ae::rbfcreate(3, 3, model);
 
-    // TODO: DDM solver?
     ae::rbfsetpoints(model, points);
     ae::rbfsetalgohierarchical(model, opts->rbf_size, opts->rbf_layers, opts->rbf_smoothing);
-
-    // TODO: Report errors? Print solve error. Also speed.
     ae::rbfbuildmodel(model, *rep);
 
     ae::real_1d_array grid = linspace(0.0, 1.0, opts->cube_size);
@@ -220,8 +217,6 @@ ae::real_2d_array load_points(Config *opts) {
     } catch (...) {
         exit_err("Could not read DSV. Check that the file exists and has real Nx3 contents.\n");
     }
-
-    // --- Sanity checks. TODO: Reader? --- //
 
     if (source.rows() == 0) exit_err("No readable DSV content in source.\n");
     if (target.rows() == 0) exit_err("No readable DSV content in target.\n");
