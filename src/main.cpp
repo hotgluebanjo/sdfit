@@ -329,7 +329,7 @@ void parse_options(Config *opts, const char **argv, int argc) {
                 opts->mlp_restarts = atoi(argv[i + 1]);
                 break;
             default:
-                exit_err("Unkown option. Check -h for help.\n");
+                exit_err("Unknown option. Check -h for help.\n");
             }
         }
     }
