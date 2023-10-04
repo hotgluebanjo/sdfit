@@ -1,4 +1,3 @@
-// https://github.com/chensun11/dtfv/blob/master/src/Makefile
 #include <assert.h>
 #include <fstream>
 #include <iomanip>
@@ -150,7 +149,7 @@ ae::real_1d_array build_lut_mlp(ae::real_2d_array points, Config *opts, ae::mlpr
     ae::mlpsetdataset(trn, points, points.rows());
 
     ae::multilayerperceptron network;
-    ae::mlpcreate1(3, opts->mlp_layers, 3, network); // 5 hidden layers would be 3x5x3 (3 in, 3 out)
+    ae::mlpcreate1(3, opts->mlp_layers, 3, network); // hidden layers. 3xNx3 (3 in, 3 out)
 
     ae::mlptrainnetwork(trn, network, opts->mlp_restarts, *rep);
 
